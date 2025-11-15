@@ -193,10 +193,48 @@ local maxProvincesPerCycle = 50
 local protectedProvinces = {}      -- [part] = true
 local provinceData = {}            -- данные по провинциям
 
+-- Создаем общий контейнер для хранения защищенных провинций (для доступа из других скриптов)
+local protectedProvincesFolder = ReplicatedStorage:FindFirstChild("ProtectedProvinces")
+if protectedProvincesFolder then
+    -- Если папка уже существует (от предыдущего запуска), очищаем её
+    protectedProvincesFolder:ClearAllChildren()
+else
+    protectedProvincesFolder = Instance.new("Folder")
+    protectedProvincesFolder.Name = "ProtectedProvinces"
+    protectedProvincesFolder.Parent = ReplicatedStorage
+end
+
+-- Синхронизация: если провинция удалена из ReplicatedStorage, удаляем её из локального списка
+protectedProvincesFolder.ChildRemoved:Connect(function(removedChild)
+    if removedChild:IsA("ObjectValue") then
+        local part = removedChild.Value
+        if part and protectedProvinces[part] then
+            protectedProvinces[part] = nil
+            local data = provinceData[part]
+            if data then
+                provinceData[part] = nil
+            end
+        end
+        -- Также проверяем все провинции на случай, если ссылка не совпадает
+        for protectedPart, _ in pairs(protectedProvinces) do
+            if protectedPart and not protectedPart.Parent then
+                protectedProvinces[protectedPart] = nil
+                provinceData[protectedPart] = nil
+            end
+        end
+    end
+end)
+
 -- Добавление провинции под защиту
 local function protectProvince(part)
     if part and part.Name == "Province" and not protectedProvinces[part] then
         protectedProvinces[part] = true
+        
+        -- Создаем ObjectValue в ReplicatedStorage для доступа из других скриптов
+        local provinceRef = Instance.new("ObjectValue")
+        provinceRef.Name = tostring(part:GetDebugId())
+        provinceRef.Value = part
+        provinceRef.Parent = protectedProvincesFolder
         
         local initialColor = part.Color
         local now = os.clock()
@@ -210,8 +248,23 @@ local function protectProvince(part)
             underAutoclickerAttack = false,
             lastColorChangeTime = now,
             lastRecoveryCheck = now,
-            lastChangeTime = 0
+            lastChangeTime = 0,
+            ref = provinceRef  -- Сохраняем ссылку для удаления
         }
+    end
+end
+
+-- Удаление провинции из защиты
+local function unprotectProvince(part)
+    if part and protectedProvinces[part] then
+        protectedProvinces[part] = nil
+        local data = provinceData[part]
+        if data then
+            if data.ref then
+                data.ref:Destroy()
+            end
+            provinceData[part] = nil
+        end
     end
 end
 
@@ -380,8 +433,7 @@ RunService.Heartbeat:Connect(function()
 
     for part, _ in pairs(protectedProvinces) do
         if not part or not part.Parent then
-            protectedProvinces[part] = nil
-            provinceData[part] = nil
+            unprotectProvince(part)
         end
     end
 
