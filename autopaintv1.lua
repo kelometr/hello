@@ -207,19 +207,39 @@ end
 -- Синхронизация: если провинция удалена из ReplicatedStorage, удаляем её из локального списка
 protectedProvincesFolder.ChildRemoved:Connect(function(removedChild)
     if removedChild:IsA("ObjectValue") then
-        local part = removedChild.Value
-        if part and protectedProvinces[part] then
-            protectedProvinces[part] = nil
-            local data = provinceData[part]
-            if data then
-                provinceData[part] = nil
+        local removedPart = removedChild.Value
+        
+        -- Удаляем по прямой ссылке
+        if removedPart and protectedProvinces[removedPart] then
+            protectedProvinces[removedPart] = nil
+            if provinceData[removedPart] then
+                provinceData[removedPart] = nil
             end
         end
-        -- Также проверяем все провинции на случай, если ссылка не совпадает
+        
+        -- Также ищем по позиции и имени на случай, если ссылка не совпадает
+        if removedPart then
+            for protectedPart, _ in pairs(protectedProvinces) do
+                if protectedPart and protectedPart.Parent then
+                    -- Сравниваем по позиции и имени
+                    if protectedPart.Position == removedPart.Position and protectedPart.Name == removedPart.Name then
+                        protectedProvinces[protectedPart] = nil
+                        if provinceData[protectedPart] then
+                            provinceData[protectedPart] = nil
+                        end
+                        break
+                    end
+                end
+            end
+        end
+        
+        -- Очищаем несуществующие провинции
         for protectedPart, _ in pairs(protectedProvinces) do
-            if protectedPart and not protectedPart.Parent then
+            if not protectedPart or not protectedPart.Parent then
                 protectedProvinces[protectedPart] = nil
-                provinceData[protectedPart] = nil
+                if provinceData[protectedPart] then
+                    provinceData[protectedPart] = nil
+                end
             end
         end
     end
