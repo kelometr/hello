@@ -209,37 +209,13 @@ protectedProvincesFolder.ChildRemoved:Connect(function(removedChild)
     if removedChild:IsA("ObjectValue") then
         local removedPart = removedChild.Value
         
-        -- Удаляем по прямой ссылке
-        if removedPart and protectedProvinces[removedPart] then
-            protectedProvinces[removedPart] = nil
+        -- Удаляем только по прямой ссылке (самый надежный способ)
+        if removedPart then
+            if protectedProvinces[removedPart] then
+                protectedProvinces[removedPart] = nil
+            end
             if provinceData[removedPart] then
                 provinceData[removedPart] = nil
-            end
-        end
-        
-        -- Также ищем по позиции и имени на случай, если ссылка не совпадает
-        if removedPart then
-            for protectedPart, _ in pairs(protectedProvinces) do
-                if protectedPart and protectedPart.Parent then
-                    -- Сравниваем по позиции и имени
-                    if protectedPart.Position == removedPart.Position and protectedPart.Name == removedPart.Name then
-                        protectedProvinces[protectedPart] = nil
-                        if provinceData[protectedPart] then
-                            provinceData[protectedPart] = nil
-                        end
-                        break
-                    end
-                end
-            end
-        end
-        
-        -- Очищаем несуществующие провинции
-        for protectedPart, _ in pairs(protectedProvinces) do
-            if not protectedPart or not protectedPart.Parent then
-                protectedProvinces[protectedPart] = nil
-                if provinceData[protectedPart] then
-                    provinceData[protectedPart] = nil
-                end
             end
         end
     end
