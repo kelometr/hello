@@ -234,20 +234,12 @@ doneButton.MouseLeave:Connect(function()
     end
     
     if foundRef then
-        -- Удаляем только найденную ссылку
+        -- Удаляем только найденную ссылку (highlight удалится автоматически через ChildRemoved в основном скрипте)
         foundRef:Destroy()
         
-        -- Визуальная обратная связь
+        -- Визуальная обратная связь (только мигание цвета, без создания нового highlight)
         if part and part.Parent then
             local originalColor = part.Color
-            local highlight = Instance.new("SelectionBox")
-            highlight.Adornee = part
-            highlight.Color3 = Color3.fromRGB(255, 100, 100)
-            highlight.Transparency = 0.5
-            highlight.LineThickness = 0.2
-            highlight.Parent = part
-            
-            -- Мигание
             task.spawn(function()
                 for i = 1, 3 do
                     if part and part.Parent then
@@ -259,17 +251,14 @@ doneButton.MouseLeave:Connect(function()
                         task.wait(0.1)
                     end
                 end
-                if highlight then
-                    highlight:Destroy()
-                end
             end)
         end
         
-            print("Province removed from protection: " .. tostring(part))
-            return true
-        end
-        return false
+        print("Province removed from protection: " .. tostring(part))
+        return true
     end
+    return false
+end
 
     -- Обработка клика левой кнопкой мыши
     local mouse = player:GetMouse()
@@ -314,3 +303,4 @@ end
 if not selectionState or selectionState.Value == false then
     runRemoveProvinceScript()
 end
+
