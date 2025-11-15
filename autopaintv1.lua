@@ -195,13 +195,39 @@ local provinceData = {}            -- данные по провинциям
 
 -- Создаем общий контейнер для хранения защищенных провинций (для доступа из других скриптов)
 local protectedProvincesFolder = ReplicatedStorage:FindFirstChild("ProtectedProvinces")
-if protectedProvincesFolder then
-    -- Если папка уже существует (от предыдущего запуска), очищаем её
-    protectedProvincesFolder:ClearAllChildren()
-else
+if not protectedProvincesFolder then
     protectedProvincesFolder = Instance.new("Folder")
     protectedProvincesFolder.Name = "ProtectedProvinces"
     protectedProvincesFolder.Parent = ReplicatedStorage
+end
+
+-- Восстанавливаем защищенные провинции из ReplicatedStorage при запуске
+for _, objValue in ipairs(protectedProvincesFolder:GetChildren()) do
+    if objValue:IsA("ObjectValue") and objValue.Value then
+        local part = objValue.Value
+        if part and part.Parent and part.Name == "Province" and not protectedProvinces[part] then
+            protectedProvinces[part] = true
+            
+            local initialColor = part.Color
+            local now = os.clock()
+            provinceData[part] = {
+                lastColor = initialColor,
+                colorChangeTimestamps = {},
+                ignoreTimer = 0,
+                wasRepainted = false,
+                ourColor = (initialColor == currentColor),
+                lastPaintTime = 0,
+                underAutoclickerAttack = false,
+                lastColorChangeTime = now,
+                lastRecoveryCheck = now,
+                lastChangeTime = 0,
+                ref = objValue
+            }
+        elseif not part or not part.Parent then
+            -- Очищаем ссылки на несуществующие провинции
+            objValue:Destroy()
+        end
+    end
 end
 
 -- Синхронизация: если провинция удалена из ReplicatedStorage, удаляем её из локального списка
@@ -217,6 +243,32 @@ protectedProvincesFolder.ChildRemoved:Connect(function(removedChild)
             if provinceData[removedPart] then
                 provinceData[removedPart] = nil
             end
+        end
+    end
+end)
+
+-- Синхронизация: если провинция добавлена в ReplicatedStorage, добавляем её в локальный список
+protectedProvincesFolder.ChildAdded:Connect(function(addedChild)
+    if addedChild:IsA("ObjectValue") and addedChild.Value then
+        local part = addedChild.Value
+        if part and part.Parent and part.Name == "Province" and not protectedProvinces[part] then
+            protectedProvinces[part] = true
+            
+            local initialColor = part.Color
+            local now = os.clock()
+            provinceData[part] = {
+                lastColor = initialColor,
+                colorChangeTimestamps = {},
+                ignoreTimer = 0,
+                wasRepainted = false,
+                ourColor = (initialColor == currentColor),
+                lastPaintTime = 0,
+                underAutoclickerAttack = false,
+                lastColorChangeTime = now,
+                lastRecoveryCheck = now,
+                lastChangeTime = 0,
+                ref = addedChild
+            }
         end
     end
 end)
