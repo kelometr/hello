@@ -137,14 +137,10 @@ local function isProvinceProtected(part)
         return false
     end
     
-    -- Проверяем по имени провинции и позиции для более надежного поиска
+    -- Проверяем только по прямой ссылке (самый надежный способ)
     for _, objValue in ipairs(protectedFolder:GetChildren()) do
-        if objValue:IsA("ObjectValue") and objValue.Value then
-            local protectedPart = objValue.Value
-            -- Сравниваем по ссылке и по позиции
-            if protectedPart == part or (protectedPart.Position == part.Position and protectedPart.Name == part.Name) then
-                return true, objValue
-            end
+        if objValue:IsA("ObjectValue") and objValue.Value == part then
+            return true, objValue
         end
     end
     return false
@@ -161,23 +157,18 @@ local function removeProvince(part)
         return false
     end
     
-    -- Ищем все ObjectValue, которые ссылаются на эту провинцию
-    local foundRefs = {}
+    -- Ищем ObjectValue, который ссылается именно на эту провинцию (только по прямой ссылке)
+    local foundRef = nil
     for _, objValue in ipairs(protectedFolder:GetChildren()) do
-        if objValue:IsA("ObjectValue") and objValue.Value then
-            local protectedPart = objValue.Value
-            -- Сравниваем по ссылке или по позиции и имени
-            if protectedPart == part or (protectedPart.Position == part.Position and protectedPart.Name == part.Name) then
-                table.insert(foundRefs, objValue)
-            end
+        if objValue:IsA("ObjectValue") and objValue.Value == part then
+            foundRef = objValue
+            break
         end
     end
     
-    if #foundRefs > 0 then
-        -- Удаляем все найденные ссылки
-        for _, objValue in ipairs(foundRefs) do
-            objValue:Destroy()
-        end
+    if foundRef then
+        -- Удаляем только найденную ссылку
+        foundRef:Destroy()
         
         -- Визуальная обратная связь
         if part and part.Parent then
