@@ -227,12 +227,17 @@ for _, objValue in ipairs(protectedProvincesFolder:GetChildren()) do
         if part and part.Parent and part.Name == "Province" and not protectedProvinces[part] then
             protectedProvinces[part] = true
             
-            -- Создаем highlight для восстановленной провинции
+            -- Создаем highlight для восстановленной провинции (проверяем, нет ли уже highlight)
+            local existingHighlight = part:FindFirstChildOfClass("SelectionBox")
+            if existingHighlight then
+                existingHighlight:Destroy()
+            end
+            
             local highlight = Instance.new("SelectionBox")
             highlight.Adornee = part
             highlight.Color3 = currentColor
-            highlight.Transparency = 0.5
-            highlight.LineThickness = 0.2
+            highlight.Transparency = 0.2  -- Более заметный
+            highlight.LineThickness = 0.3  -- Толще
             highlight.Parent = part
             
             local initialColor = part.Color
@@ -267,9 +272,15 @@ protectedProvincesFolder.ChildRemoved:Connect(function(removedChild)
         if removedPart then
             local data = provinceData[removedPart]
             if data then
-                -- Удаляем highlight
+                -- Удаляем highlight (проверяем все возможные highlight на провинции)
                 if data.highlight then
                     data.highlight:Destroy()
+                end
+                -- Также удаляем любой другой highlight на провинции (на случай дублирования)
+                for _, child in ipairs(removedPart:GetChildren()) do
+                    if child:IsA("SelectionBox") then
+                        child:Destroy()
+                    end
                 end
             end
             if protectedProvinces[removedPart] then
@@ -289,12 +300,17 @@ protectedProvincesFolder.ChildAdded:Connect(function(addedChild)
         if part and part.Parent and part.Name == "Province" and not protectedProvinces[part] then
             protectedProvinces[part] = true
             
-            -- Создаем highlight для добавленной провинции
+            -- Создаем highlight для добавленной провинции (проверяем, нет ли уже highlight)
+            local existingHighlight = part:FindFirstChildOfClass("SelectionBox")
+            if existingHighlight then
+                existingHighlight:Destroy()
+            end
+            
             local highlight = Instance.new("SelectionBox")
             highlight.Adornee = part
             highlight.Color3 = currentColor
-            highlight.Transparency = 0.5
-            highlight.LineThickness = 0.2
+            highlight.Transparency = 0.2  -- Более заметный
+            highlight.LineThickness = 0.3  -- Толще
             highlight.Parent = part
             
             local initialColor = part.Color
@@ -328,12 +344,17 @@ local function protectProvince(part)
         provinceRef.Value = part
         provinceRef.Parent = protectedProvincesFolder
         
-        -- Создаем highlight для провинции
+        -- Создаем highlight для провинции (проверяем, нет ли уже highlight)
+        local existingHighlight = part:FindFirstChildOfClass("SelectionBox")
+        if existingHighlight then
+            existingHighlight:Destroy()
+        end
+        
         local highlight = Instance.new("SelectionBox")
         highlight.Adornee = part
         highlight.Color3 = currentColor
-        highlight.Transparency = 0.5
-        highlight.LineThickness = 0.2
+        highlight.Transparency = 0.2  -- Более заметный
+        highlight.LineThickness = 0.3  -- Толще
         highlight.Parent = part
         
         local initialColor = part.Color
@@ -361,9 +382,15 @@ local function unprotectProvince(part)
         protectedProvinces[part] = nil
         local data = provinceData[part]
         if data then
-            -- Удаляем highlight
+            -- Удаляем highlight (проверяем все возможные highlight на провинции)
             if data.highlight then
                 data.highlight:Destroy()
+            end
+            -- Также удаляем любой другой highlight на провинции (на случай дублирования)
+            for _, child in ipairs(part:GetChildren()) do
+                if child:IsA("SelectionBox") then
+                    child:Destroy()
+                end
             end
             if data.ref then
                 data.ref:Destroy()
