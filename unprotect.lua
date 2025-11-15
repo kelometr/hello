@@ -13,24 +13,91 @@ while not player.Character or not player.Character:FindFirstChild("HumanoidRootP
     task.wait(0.01)
 end
 
--- Создаем GUI для индикации режима удаления
-local playerGui = player:WaitForChild("PlayerGui")
+-- Проверяем, активен ли режим выбора провинций в основном скрипте
+local selectionState = ReplicatedStorage:FindFirstChild("SelectionActive")
 
--- Очистка старых GUI
-local oldGui = playerGui:FindFirstChild("RemoveProvinceGUI")
-if oldGui then
-    oldGui:Destroy()
+if selectionState and selectionState.Value == true then
+    -- Режим выбора еще активен, ждем пока пользователь нажмет Done
+    print("Please finish province selection first (click 'Done' in AutoPaint script)")
+    
+    -- Создаем сообщение для пользователя
+    local playerGui = player:WaitForChild("PlayerGui")
+    local messageGui = Instance.new("ScreenGui")
+    messageGui.Name = "RemoveProvinceWaitMessage"
+    messageGui.ResetOnSpawn = false
+    messageGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    messageGui.Parent = playerGui
+    
+    local messageFrame = Instance.new("Frame")
+    messageFrame.Name = "WaitMessageFrame"
+    messageFrame.Size = UDim2.new(0, 400, 0, 100)
+    messageFrame.Position = UDim2.new(0.5, -200, 0.5, -50)
+    messageFrame.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
+    messageFrame.BorderSizePixel = 0
+    messageFrame.BackgroundTransparency = 0.1
+    messageFrame.Parent = messageGui
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = messageFrame
+    
+    local messageText = Instance.new("TextLabel")
+    messageText.Name = "MessageText"
+    messageText.Size = UDim2.new(1, -40, 1, -40)
+    messageText.Position = UDim2.new(0, 20, 0, 20)
+    messageText.BackgroundTransparency = 1
+    messageText.Text = "Please finish province selection first!\nClick 'Done' in AutoPaint script first."
+    messageText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    messageText.TextSize = 18
+    messageText.Font = Enum.Font.GothamBold
+    messageText.TextWrapped = true
+    messageText.Parent = messageFrame
+    
+    -- Ждем, пока режим выбора не завершится
+    local connection
+    connection = selectionState:GetPropertyChangedSignal("Value"):Connect(function()
+        if selectionState.Value == false then
+            -- Режим выбора завершен, можно запускать скрипт удаления
+            messageGui:Destroy()
+            connection:Disconnect()
+            -- Запускаем основной код скрипта
+            task.spawn(function()
+                task.wait(0.5)  -- Небольшая задержка для завершения основного скрипта
+                -- Продолжаем выполнение скрипта
+                runRemoveProvinceScript()
+            end)
+        end
+    end)
+    
+    -- Если режим выбора уже завершен, сразу запускаем
+    if selectionState.Value == false then
+        messageGui:Destroy()
+        if connection then connection:Disconnect() end
+        runRemoveProvinceScript()
+    else
+        return  -- Выходим из скрипта, ждем завершения режима выбора
+    end
 end
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "RemoveProvinceGUI"
-screenGui.ResetOnSpawn = false
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-screenGui.Parent = playerGui
+-- Функция с основным кодом скрипта удаления
+function runRemoveProvinceScript()
+    -- Создаем GUI для индикации режима удаления
+    local playerGui = player:WaitForChild("PlayerGui")
 
+    -- Очистка старых GUI
+    local oldGui = playerGui:FindFirstChild("RemoveProvinceGUI")
+    if oldGui then
+        oldGui:Destroy()
+    end
 
--- Кнопка Done
-local doneButtonFrame = Instance.new("Frame")
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "RemoveProvinceGUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.Parent = playerGui
+
+    -- Кнопка Done
+    local doneButtonFrame = Instance.new("Frame")
 doneButtonFrame.Name = "DoneButtonFrame"
 doneButtonFrame.Size = UDim2.new(0, 0, 0, 0)  -- Начинаем с нулевого размера для анимации
 doneButtonFrame.Position = UDim2.new(0.5, -175, 0, 20)
@@ -39,11 +106,11 @@ doneButtonFrame.BorderSizePixel = 0
 doneButtonFrame.BackgroundTransparency = 1  -- Начинаем с прозрачным для анимации
 doneButtonFrame.Parent = screenGui
 
-local doneCorner = Instance.new("UICorner")
-doneCorner.CornerRadius = UDim.new(0, 16)
-doneCorner.Parent = doneButtonFrame
+    local doneCorner = Instance.new("UICorner")
+    doneCorner.CornerRadius = UDim.new(0, 16)
+    doneCorner.Parent = doneButtonFrame
 
-local doneButton = Instance.new("TextButton")
+    local doneButton = Instance.new("TextButton")
 doneButton.Name = "DoneButton"
 doneButton.Size = UDim2.new(1, -30, 1, -30)
 doneButton.Position = UDim2.new(0, 15, 0, 15)
@@ -55,14 +122,14 @@ doneButton.TextSize = 32
 doneButton.Font = Enum.Font.GothamBold
 doneButton.TextTransparency = 1  -- Начинаем с прозрачным текстом
 doneButton.BackgroundTransparency = 1  -- Начинаем с прозрачным фоном
-doneButton.Parent = doneButtonFrame
+    doneButton.Parent = doneButtonFrame
 
-local buttonCorner = Instance.new("UICorner")
-buttonCorner.CornerRadius = UDim.new(0, 12)
-buttonCorner.Parent = doneButton
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 12)
+    buttonCorner.Parent = doneButton
 
--- Анимация появления
-task.spawn(function()
+    -- Анимация появления
+    task.spawn(function()
     task.wait(0.1)
     -- Анимация кнопки Done
     local doneFadeIn = TweenService:Create(
@@ -83,11 +150,11 @@ task.spawn(function()
             TextTransparency = 0
         }
     )
-    doneButtonFadeIn:Play()
-end)
+        doneButtonFadeIn:Play()
+    end)
 
--- Анимация при наведении на кнопку Done
-doneButton.MouseEnter:Connect(function()
+    -- Анимация при наведении на кнопку Done
+    doneButton.MouseEnter:Connect(function()
     local tween = TweenService:Create(
         doneButton,
         TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -102,14 +169,14 @@ doneButton.MouseLeave:Connect(function()
         TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {BackgroundColor3 = Color3.fromRGB(200, 50, 50)}
     )
-    tween:Play()
-end)
+        tween:Play()
+    end)
 
--- Флаг для отслеживания режима удаления
-local removalModeActive = true
+    -- Флаг для отслеживания режима удаления
+    local removalModeActive = true
 
--- Обработка нажатия кнопки Done
-doneButton.MouseButton1Click:Connect(function()
+    -- Обработка нажатия кнопки Done
+    doneButton.MouseButton1Click:Connect(function()
     -- Отключаем режим удаления
     removalModeActive = false
     
@@ -126,12 +193,12 @@ doneButton.MouseButton1Click:Connect(function()
     end)
     
     -- Изменяем текст кнопки на короткое время
-    doneButton.Text = "Removal Complete!"
-    doneButton.BackgroundColor3 = Color3.fromRGB(50, 150, 200)
-end)
+        doneButton.Text = "Removal Complete!"
+        doneButton.BackgroundColor3 = Color3.fromRGB(50, 150, 200)
+    end)
 
--- Функция проверки, защищена ли провинция
-local function isProvinceProtected(part)
+    -- Функция проверки, защищена ли провинция
+    local function isProvinceProtected(part)
     local protectedFolder = ReplicatedStorage:FindFirstChild("ProtectedProvinces")
     if not protectedFolder then
         return false
@@ -143,11 +210,11 @@ local function isProvinceProtected(part)
             return true, objValue
         end
     end
-    return false
-end
+        return false
+    end
 
--- Функция удаления провинции из защиты
-local function removeProvince(part)
+    -- Функция удаления провинции из защиты
+    local function removeProvince(part)
     if not part or not part.Parent then
         return false
     end
@@ -198,44 +265,52 @@ local function removeProvince(part)
             end)
         end
         
-        print("Province removed from protection: " .. tostring(part))
-        return true
+            print("Province removed from protection: " .. tostring(part))
+            return true
+        end
+        return false
     end
-    return false
+
+    -- Обработка клика левой кнопкой мыши
+    local mouse = player:GetMouse()
+
+    mouse.Button1Down:Connect(function()
+        if not removalModeActive then return end
+        
+        local target = mouse.Target
+        if target and target.Name == "Province" and target:IsDescendantOf(Workspace:WaitForChild("Map")) then
+            removeProvince(target)
+        end
+    end)
+
+    -- Синхронизация с основным скриптом
+    -- Периодически проверяем, какие провинции еще защищены, и обновляем локальный список
+    local protectedProvinces = {}
+    local protectedFolder = ReplicatedStorage:WaitForChild("ProtectedProvinces")
+
+    protectedFolder.ChildAdded:Connect(function(child)
+        if child:IsA("ObjectValue") and child.Value then
+            protectedProvinces[child.Value] = true
+        end
+    end)
+
+    protectedFolder.ChildRemoved:Connect(function(child)
+        if child:IsA("ObjectValue") and child.Value then
+            protectedProvinces[child.Value] = nil
+        end
+    end)
+
+    -- Инициализация существующих провинций
+    for _, child in ipairs(protectedFolder:GetChildren()) do
+        if child:IsA("ObjectValue") and child.Value then
+            protectedProvinces[child.Value] = true
+        end
+    end
+
+    print("RemoveProvince script loaded. Click on protected provinces to remove them from protection.")
 end
 
--- Обработка клика левой кнопкой мыши
-local mouse = player:GetMouse()
-
-mouse.Button1Down:Connect(function()
-    if not removalModeActive then return end
-    
-    local target = mouse.Target
-    if target and target.Name == "Province" and target:IsDescendantOf(Workspace:WaitForChild("Map")) then
-        removeProvince(target)
-    end
-end)
-
--- Синхронизация с основным скриптом
--- Периодически проверяем, какие провинции еще защищены, и обновляем локальный список
-local protectedProvinces = {}
-local protectedFolder = ReplicatedStorage:WaitForChild("ProtectedProvinces")
-
-protectedFolder.ChildAdded:Connect(function(child)
-    if child:IsA("ObjectValue") and child.Value then
-        protectedProvinces[child.Value] = true
-    end
-end)
-
-protectedFolder.ChildRemoved:Connect(function(child)
-    if child:IsA("ObjectValue") and child.Value then
-        protectedProvinces[child.Value] = nil
-    end
-end)
-
--- Инициализация существующих провинций
-for _, child in ipairs(protectedFolder:GetChildren()) do
-    if child:IsA("ObjectValue") and child.Value then
-        protectedProvinces[child.Value] = true
-    end
+-- Если режим выбора уже завершен, сразу запускаем скрипт
+if not selectionState or selectionState.Value == false then
+    runRemoveProvinceScript()
 end
