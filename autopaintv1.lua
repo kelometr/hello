@@ -38,6 +38,18 @@ screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
+-- Скрываем все другие GUI на экране
+local hiddenGUIs = {}
+for _, gui in ipairs(playerGui:GetChildren()) do
+    if gui:IsA("ScreenGui") and gui ~= screenGui then
+        table.insert(hiddenGUIs, {
+            gui = gui,
+            enabled = gui.Enabled
+        })
+        gui.Enabled = false
+    end
+end
+
 -- Создаем фрейм для кнопки (увеличенный размер)
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "DoneButtonFrame"
@@ -123,6 +135,13 @@ end)
 doneButton.MouseButton1Click:Connect(function()
     -- Отключаем выбор провинций
     selectionState.Value = false
+    
+    -- Восстанавливаем все скрытые GUI
+    for _, guiData in ipairs(hiddenGUIs) do
+        if guiData.gui and guiData.gui.Parent then
+            guiData.gui.Enabled = guiData.enabled
+        end
+    end
     
     -- Анимация исчезновения
     local fadeOut = TweenService:Create(
