@@ -227,6 +227,14 @@ for _, objValue in ipairs(protectedProvincesFolder:GetChildren()) do
         if part and part.Parent and part.Name == "Province" and not protectedProvinces[part] then
             protectedProvinces[part] = true
             
+            -- Создаем highlight для восстановленной провинции
+            local highlight = Instance.new("SelectionBox")
+            highlight.Adornee = part
+            highlight.Color3 = currentColor
+            highlight.Transparency = 0.5
+            highlight.LineThickness = 0.2
+            highlight.Parent = part
+            
             local initialColor = part.Color
             local now = os.clock()
             provinceData[part] = {
@@ -240,7 +248,8 @@ for _, objValue in ipairs(protectedProvincesFolder:GetChildren()) do
                 lastColorChangeTime = now,
                 lastRecoveryCheck = now,
                 lastChangeTime = 0,
-                ref = objValue
+                ref = objValue,
+                highlight = highlight
             }
         elseif not part or not part.Parent then
             -- Очищаем ссылки на несуществующие провинции
@@ -256,6 +265,13 @@ protectedProvincesFolder.ChildRemoved:Connect(function(removedChild)
         
         -- Удаляем только по прямой ссылке (самый надежный способ)
         if removedPart then
+            local data = provinceData[removedPart]
+            if data then
+                -- Удаляем highlight
+                if data.highlight then
+                    data.highlight:Destroy()
+                end
+            end
             if protectedProvinces[removedPart] then
                 protectedProvinces[removedPart] = nil
             end
@@ -273,6 +289,14 @@ protectedProvincesFolder.ChildAdded:Connect(function(addedChild)
         if part and part.Parent and part.Name == "Province" and not protectedProvinces[part] then
             protectedProvinces[part] = true
             
+            -- Создаем highlight для добавленной провинции
+            local highlight = Instance.new("SelectionBox")
+            highlight.Adornee = part
+            highlight.Color3 = currentColor
+            highlight.Transparency = 0.5
+            highlight.LineThickness = 0.2
+            highlight.Parent = part
+            
             local initialColor = part.Color
             local now = os.clock()
             provinceData[part] = {
@@ -286,7 +310,8 @@ protectedProvincesFolder.ChildAdded:Connect(function(addedChild)
                 lastColorChangeTime = now,
                 lastRecoveryCheck = now,
                 lastChangeTime = 0,
-                ref = addedChild
+                ref = addedChild,
+                highlight = highlight
             }
         end
     end
@@ -303,6 +328,14 @@ local function protectProvince(part)
         provinceRef.Value = part
         provinceRef.Parent = protectedProvincesFolder
         
+        -- Создаем highlight для провинции
+        local highlight = Instance.new("SelectionBox")
+        highlight.Adornee = part
+        highlight.Color3 = currentColor
+        highlight.Transparency = 0.5
+        highlight.LineThickness = 0.2
+        highlight.Parent = part
+        
         local initialColor = part.Color
         local now = os.clock()
         provinceData[part] = {
@@ -316,7 +349,8 @@ local function protectProvince(part)
             lastColorChangeTime = now,
             lastRecoveryCheck = now,
             lastChangeTime = 0,
-            ref = provinceRef  -- Сохраняем ссылку для удаления
+            ref = provinceRef,  -- Сохраняем ссылку для удаления
+            highlight = highlight  -- Сохраняем ссылку на highlight
         }
     end
 end
@@ -327,6 +361,10 @@ local function unprotectProvince(part)
         protectedProvinces[part] = nil
         local data = provinceData[part]
         if data then
+            -- Удаляем highlight
+            if data.highlight then
+                data.highlight:Destroy()
+            end
             if data.ref then
                 data.ref:Destroy()
             end
