@@ -9,6 +9,10 @@ local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 
+-- Forward declarations for shared state
+local protectedProvinces = {}
+local provinceData = {}
+
 -- ============================================
 -- SelectionController - создание GUI и управления выбором
 -- ============================================
@@ -31,6 +35,9 @@ selectionState.Name = "SelectionActive"
 selectionState.Value = true
 selectionState.Parent = ReplicatedStorage
 
+-- Цвет покраски (объявляем до использования)
+local currentColor = Color3.fromRGB(233, 218, 218)
+
 -- Создаем GUI
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "SelectionController"
@@ -48,6 +55,39 @@ for _, gui in ipairs(playerGui:GetChildren()) do
         })
         gui.Enabled = false
     end
+end
+
+-- Папка для Highlight объектов
+local highlightFolder = Workspace:FindFirstChild("AutoPaintHighlights")
+if not highlightFolder then
+    highlightFolder = Instance.new("Folder")
+    highlightFolder.Name = "AutoPaintHighlights"
+    highlightFolder.Parent = Workspace
+end
+
+local function createHighlight(part)
+    if not part or not part.Parent then return nil end
+    local data = provinceData[part]
+    if data and data.highlight then
+        data.highlight:Destroy()
+        data.highlight = nil
+    end
+    -- Удаляем любые существующие Highlight у части
+    for _, child in ipairs(highlightFolder:GetChildren()) do
+        if child:IsA("Highlight") and child.Adornee == part then
+            child:Destroy()
+        end
+    end
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "AutoPaintHighlight"
+    highlight.Adornee = part
+    highlight.FillColor = currentColor
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.85
+    highlight.OutlineTransparency = 0.2
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = highlightFolder
+    return highlight
 end
 
 -- Создаем фрейм для кнопки (увеличенный размер)
@@ -189,8 +229,6 @@ local function isSelectionActive()
     return true
 end
 
--- Настройки
-local currentColor = Color3.fromRGB(233, 218, 218)
 local mode = "Peace"
 
 -- Настройки антиспама и детекта автокликера
@@ -209,8 +247,8 @@ local minChangeDelay = 0.15
 local maxProvincesPerCycle = 50
 
 -- Очистка старых данных при повторном запуске
-local protectedProvinces = {}      -- [part] = true
-local provinceData = {}            -- данные по провинциям
+protectedProvinces = {}      -- [part] = true
+provinceData = {}            -- данные по провинциям
 
 -- Создаем общий контейнер для хранения защищенных провинций (для доступа из других скриптов)
 local protectedProvincesFolder = ReplicatedStorage:FindFirstChild("ProtectedProvinces")
@@ -227,19 +265,6 @@ for _, objValue in ipairs(protectedProvincesFolder:GetChildren()) do
         if part and part.Parent and part.Name == "Province" and not protectedProvinces[part] then
             protectedProvinces[part] = true
             
-            -- Создаем highlight для восстановленной провинции (проверяем, нет ли уже highlight)
-            local existingHighlight = part:FindFirstChildOfClass("SelectionBox")
-            if existingHighlight then
-                existingHighlight:Destroy()
-            end
-            
-            local highlight = Instance.new("SelectionBox")
-            highlight.Adornee = part
-            highlight.Color3 = currentColor
-            highlight.Transparency = 0.2  -- Более заметный
-            highlight.LineThickness = 0.3  -- Толще
-            highlight.Parent = part
-            
             local initialColor = part.Color
             local now = os.clock()
             provinceData[part] = {
@@ -254,7 +279,7 @@ for _, objValue in ipairs(protectedProvincesFolder:GetChildren()) do
                 lastRecoveryCheck = now,
                 lastChangeTime = 0,
                 ref = objValue,
-                highlight = highlight
+                highlight = createHighlight(part)
             }
         elseif not part or not part.Parent then
             -- Очищаем ссылки на несуществующие провинции
@@ -300,19 +325,6 @@ protectedProvincesFolder.ChildAdded:Connect(function(addedChild)
         if part and part.Parent and part.Name == "Province" and not protectedProvinces[part] then
             protectedProvinces[part] = true
             
-            -- Создаем highlight для добавленной провинции (проверяем, нет ли уже highlight)
-            local existingHighlight = part:FindFirstChildOfClass("SelectionBox")
-            if existingHighlight then
-                existingHighlight:Destroy()
-            end
-            
-            local highlight = Instance.new("SelectionBox")
-            highlight.Adornee = part
-            highlight.Color3 = currentColor
-            highlight.Transparency = 0.2  -- Более заметный
-            highlight.LineThickness = 0.3  -- Толще
-            highlight.Parent = part
-            
             local initialColor = part.Color
             local now = os.clock()
             provinceData[part] = {
@@ -327,7 +339,7 @@ protectedProvincesFolder.ChildAdded:Connect(function(addedChild)
                 lastRecoveryCheck = now,
                 lastChangeTime = 0,
                 ref = addedChild,
-                highlight = highlight
+                highlight = createHighlight(part)
             }
         end
     end
@@ -344,19 +356,6 @@ local function protectProvince(part)
         provinceRef.Value = part
         provinceRef.Parent = protectedProvincesFolder
         
-        -- Создаем highlight для провинции (проверяем, нет ли уже highlight)
-        local existingHighlight = part:FindFirstChildOfClass("SelectionBox")
-        if existingHighlight then
-            existingHighlight:Destroy()
-        end
-        
-        local highlight = Instance.new("SelectionBox")
-        highlight.Adornee = part
-        highlight.Color3 = currentColor
-        highlight.Transparency = 0.2  -- Более заметный
-        highlight.LineThickness = 0.3  -- Толще
-        highlight.Parent = part
-        
         local initialColor = part.Color
         local now = os.clock()
         provinceData[part] = {
@@ -371,7 +370,7 @@ local function protectProvince(part)
             lastRecoveryCheck = now,
             lastChangeTime = 0,
             ref = provinceRef,  -- Сохраняем ссылку для удаления
-            highlight = highlight  -- Сохраняем ссылку на highlight
+            highlight = createHighlight(part)  -- Сохраняем ссылку на highlight
         }
     end
 end
@@ -529,34 +528,40 @@ RunService.Heartbeat:Connect(function()
                 if not data then
                     protectProvince(part)
                     data = provinceData[part]
-                end
-                local willCheckColor = checkedCount < maxProvincesPerCycle and shouldCheckColor
-                if willCheckColor then checkedCount += 1 end
-                local partColor = willCheckColor and part.Color or data.lastColor
-                if willCheckColor and partColor ~= data.lastColor then
-                    data.lastChangeTime = now
-                    if data.ourColor and partColor ~= currentColor then
-                        data.wasRepainted = true
-                        data.ourColor = false
-                        registerColorChange(data, now)
-                    elseif partColor == currentColor then
-                        data.ourColor = true
-                        data.wasRepainted = false
-                        data.underAutoclickerAttack = false
-                        data.ignoreTimer = 0
-                        data.colorChangeTimestamps = {}
-                        data.lastColorChangeTime = now
-                        data.lastChangeTime = 0
-                    else
-                        registerColorChange(data, now)
+                    if not data then
+                        protectedProvinces[part] = nil
+                        provinceData[part] = nil
                     end
-                    data.lastColor = partColor
                 end
-                if canPaintProvince(data, now, data.lastColor) then
-                    if data.wasRepainted then
-                        table.insert(priorityQueue, part)
-                    else
-                        table.insert(secondaryQueue, part)
+                if data then
+                    local willCheckColor = checkedCount < maxProvincesPerCycle and shouldCheckColor
+                    if willCheckColor then checkedCount += 1 end
+                    local partColor = willCheckColor and part.Color or data.lastColor
+                    if willCheckColor and partColor ~= data.lastColor then
+                        data.lastChangeTime = now
+                        if data.ourColor and partColor ~= currentColor then
+                            data.wasRepainted = true
+                            data.ourColor = false
+                            registerColorChange(data, now)
+                        elseif partColor == currentColor then
+                            data.ourColor = true
+                            data.wasRepainted = false
+                            data.underAutoclickerAttack = false
+                            data.ignoreTimer = 0
+                            data.colorChangeTimestamps = {}
+                            data.lastColorChangeTime = now
+                            data.lastChangeTime = 0
+                        else
+                            registerColorChange(data, now)
+                        end
+                        data.lastColor = partColor
+                    end
+                    if canPaintProvince(data, now, data.lastColor) then
+                        if data.wasRepainted then
+                            table.insert(priorityQueue, part)
+                        else
+                            table.insert(secondaryQueue, part)
+                        end
                     end
                 end
             end
