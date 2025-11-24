@@ -303,4 +303,3 @@ end
 if not selectionState or selectionState.Value == false then
     runRemoveProvinceScript()
 end
-
